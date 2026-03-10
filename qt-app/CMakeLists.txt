@@ -1,5 +1,3 @@
-find_package(Qt6 REQUIRED COMPONENTS Core)
-
 add_executable(rawdger-qt
     src/main.cpp
 )

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.24...4.2)
 project(rawdger VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -28,5 +28,7 @@ if(RAWDGER_BUILD_JUCE)
 endif()
 
 if(RAWDGER_BUILD_QT)
+    # Find Qt at the top level so CMAKE_PREFIX_PATH is properly consumed
+    find_package(Qt6 REQUIRED COMPONENTS Core)
     add_subdirectory(qt-app)
 endif()
