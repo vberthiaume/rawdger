@@ -72,22 +72,24 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
+      - name: Find binaries
+        id: bins
+        shell: bash
+        run: |
+          # JUCE puts the binary under rawdger-juce_artefacts/
+          find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} echo "juce={}" >> "$GITHUB_OUTPUT"
+          find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1 | xargs -I{} echo "qt={}" >> "$GITHUB_OUTPUT"
+
       - name: Upload JUCE artifact
         uses: actions/upload-artifact@v4
         with:
           name: rawdger-juce-${{ matrix.name }}
-          path: |
-            build/juce-app/rawdger-juce_artefacts/Release/**/*
-            build/juce-app/Release/**/*
-            build/juce-app/rawdger-juce_artefacts/**/*
+          path: ${{ steps.bins.outputs.juce }}
           if-no-files-found: warn
 
       - name: Upload Qt artifact
         uses: actions/upload-artifact@v4
         with:
           name: rawdger-qt-${{ matrix.name }}
-          path: |
-            build/qt-app/Release/**/*
-            build/qt-app/rawdger-qt
-            build/qt-app/rawdger-qt.exe
+          path: ${{ steps.bins.outputs.qt }}
           if-no-files-found: warn
