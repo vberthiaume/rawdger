@@ -15,13 +15,13 @@ jobs:
           # macOS — JUCE + Qt
           - os: macos-latest
             name: macOS
-            cmake-args: -DCMAKE_PREFIX_PATH=$(brew --prefix qt)
-            install: brew install qt
+            cmake-args: ""
+            install: ""
 
           # Windows — JUCE + Qt
           - os: windows-latest
             name: Windows
-            cmake-args: -DCMAKE_PREFIX_PATH=C:/Qt/6.8/msvc2022_64
+            cmake-args: ""
             install: ""
 
           # Ubuntu — JUCE + Qt
@@ -49,19 +49,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Cache JUCE FetchContent download
+      # Cache JUCE source + juceaide (stable across builds, only changes with JUCE version)
       - name: Cache JUCE
         uses: actions/cache@v4
         with:
-          path: build/_deps/juce-src
-          key: juce-8.0.4
+          path: |
+            build/_deps/juce-src
+            build/_deps/juce-build
+            build/_deps/juce-subbuild
+          key: juce-8.0.4-${{ matrix.name }}
 
       # Cache CMake build directory (object files, intermediates)
       - name: Cache build
         uses: actions/cache@v4
         with:
           path: |
-            build/_deps/juce-build
             build/core
             build/juce-app
             build/qt-app
@@ -69,16 +71,12 @@ jobs:
           restore-keys: |
             build-${{ matrix.name }}-
 
-      # Qt — install via aqtinstall on Windows (with built-in cache)
-      - name: Install Qt (Windows)
-        if: runner.os == 'Windows'
+      # Qt — install via aqtinstall on Windows and macOS (with built-in cache)
+      - name: Install Qt
+        if: runner.os != 'Linux'
         uses: jurplel/install-qt-action@v4
         with:
           version: "6.8.*"
-          host: windows
-          target: desktop
-          arch: win64_msvc2022_64
-          dir: C:/Qt
           cache: true
 
       - name: Install dependencies
