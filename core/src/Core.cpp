@@ -5,7 +5,7 @@ namespace rawdger
 
 std::string getString()
 {
-    return "Hello from rawdger core!";
+    return "Hello BRO from rawdger core!";
 }
 
 } // namespace rawdger
