@@ -95,7 +95,6 @@ jobs:
         id: bins
         shell: bash
         run: |
-          # JUCE puts the binary under rawdger-juce_artefacts/
           find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} echo "juce={}" >> "$GITHUB_OUTPUT"
           QT_BIN=$(find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1)
           echo "qt=$QT_BIN" >> "$GITHUB_OUTPUT"
@@ -106,12 +105,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: windeployqt --release --no-translations "${{ steps.bins.outputs.qt }}"
-
-      # Bundle Qt dylibs on macOS
-      - name: Run macdeployqt
-        if: runner.os == 'macOS'
-        shell: bash
-        run: macdeployqt "${{ steps.bins.outputs.qt }}"
 
       - name: Upload JUCE artifact
         uses: actions/upload-artifact@v4
