@@ -91,31 +91,40 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Find binaries
-        id: bins
+      - name: Stage artifacts
         shell: bash
         run: |
-          find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} echo "juce={}" >> "$GITHUB_OUTPUT"
-          QT_BIN=$(find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1)
-          echo "qt=$QT_BIN" >> "$GITHUB_OUTPUT"
-          echo "qt_dir=$(dirname "$QT_BIN")" >> "$GITHUB_OUTPUT"
+          mkdir -p staging/juce staging/qt
 
-      # Bundle Qt DLLs on Windows so the artifact is self-contained
-      - name: Run windeployqt
-        if: runner.os == 'Windows'
+          # JUCE binary
+          find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} cp {} staging/juce/
+
+          # Qt binary
+          QT_BIN=$(find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1)
+          cp "$QT_BIN" staging/qt/
+
+      - name: Bundle Qt dependencies
+        if: runner.os != 'Linux'
         shell: bash
-        run: windeployqt --release --no-translations "${{ steps.bins.outputs.qt }}"
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            windeployqt --release --no-translations staging/qt/rawdger-qt.exe
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            mkdir -p staging/qt/lib
+            cp -R "$QT_ROOT_DIR/lib/QtCore.framework" staging/qt/lib/
+            install_name_tool -add_rpath @executable_path/lib staging/qt/rawdger-qt
+          fi
 
       - name: Upload JUCE artifact
         uses: actions/upload-artifact@v7
         with:
           name: rawdger-juce-${{ matrix.name }}
-          path: ${{ steps.bins.outputs.juce }}
+          path: staging/juce/
           if-no-files-found: warn
 
       - name: Upload Qt artifact
         uses: actions/upload-artifact@v7
         with:
           name: rawdger-qt-${{ matrix.name }}
-          path: ${{ steps.bins.outputs.qt_dir }}
+          path: staging/qt/
           if-no-files-found: warn
