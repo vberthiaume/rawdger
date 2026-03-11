@@ -110,10 +110,18 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             windeployqt --release --no-translations staging/qt/rawdger-qt.exe
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            mkdir -p staging/qt/lib
-            cp -R "$QT_ROOT_DIR/lib/QtCore.framework" staging/qt/lib/
+            # Copy only the dylib, not headers/debug info
+            mkdir -p staging/qt/lib/QtCore.framework/Versions/A
+            cp "$QT_ROOT_DIR/lib/QtCore.framework/Versions/A/QtCore" staging/qt/lib/QtCore.framework/Versions/A/
+            ln -s Versions/A/QtCore staging/qt/lib/QtCore.framework/QtCore
             install_name_tool -add_rpath @executable_path/lib staging/qt/rawdger-qt
           fi
+
+      - name: Codesign (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          codesign --force --sign - staging/juce/rawdger-juce
+          codesign --force --sign - staging/qt/rawdger-qt
 
       - name: Upload JUCE artifact
         uses: actions/upload-artifact@v7
