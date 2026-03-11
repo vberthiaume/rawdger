@@ -121,6 +121,8 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           codesign --force --sign - staging/juce/rawdger-juce
+          # Sign framework dylib first, then the executable
+          codesign --force --sign - staging/qt/lib/QtCore.framework/Versions/A/QtCore
           codesign --force --sign - staging/qt/rawdger-qt
 
       - name: Upload JUCE artifact
