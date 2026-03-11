@@ -97,7 +97,21 @@ jobs:
         run: |
           # JUCE puts the binary under rawdger-juce_artefacts/
           find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} echo "juce={}" >> "$GITHUB_OUTPUT"
-          find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1 | xargs -I{} echo "qt={}" >> "$GITHUB_OUTPUT"
+          QT_BIN=$(find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1)
+          echo "qt=$QT_BIN" >> "$GITHUB_OUTPUT"
+          echo "qt_dir=$(dirname "$QT_BIN")" >> "$GITHUB_OUTPUT"
+
+      # Bundle Qt DLLs on Windows so the artifact is self-contained
+      - name: Run windeployqt
+        if: runner.os == 'Windows'
+        shell: bash
+        run: windeployqt --release --no-translations "${{ steps.bins.outputs.qt }}"
+
+      # Bundle Qt dylibs on macOS
+      - name: Run macdeployqt
+        if: runner.os == 'macOS'
+        shell: bash
+        run: macdeployqt "${{ steps.bins.outputs.qt }}"
 
       - name: Upload JUCE artifact
         uses: actions/upload-artifact@v4
@@ -110,5 +124,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rawdger-qt-${{ matrix.name }}
-          path: ${{ steps.bins.outputs.qt }}
+          path: ${{ steps.bins.outputs.qt_dir }}
           if-no-files-found: warn
