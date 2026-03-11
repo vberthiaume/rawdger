@@ -47,11 +47,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Cache JUCE source + juceaide (stable across builds, only changes with JUCE version)
       - name: Cache JUCE
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             build/_deps/juce-src
@@ -61,7 +61,7 @@ jobs:
 
       # Cache CMake build directory (object files, intermediates)
       - name: Cache build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             build/core
@@ -107,14 +107,14 @@ jobs:
         run: windeployqt --release --no-translations "${{ steps.bins.outputs.qt }}"
 
       - name: Upload JUCE artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rawdger-juce-${{ matrix.name }}
           path: ${{ steps.bins.outputs.juce }}
           if-no-files-found: warn
 
       - name: Upload Qt artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rawdger-qt-${{ matrix.name }}
           path: ${{ steps.bins.outputs.qt_dir }}
