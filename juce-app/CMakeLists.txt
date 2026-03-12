@@ -1,8 +1,9 @@
-# juce_add_console_app is a JUCE-provided CMake function (available because the
+# juce_add_gui_app is a JUCE-provided CMake function (available because the
 # top-level CMakeLists.txt did FetchContent_MakeAvailable(juce)). It creates an
-# executable target with JUCE-specific configuration (module handling, binary
-# artefact output paths, etc.). PRODUCT_NAME sets the user-facing app name.
-juce_add_console_app(rawdger-juce
+# executable target configured as a GUI application with JUCE-specific setup
+# (module handling, binary artefact output paths, etc.).
+# PRODUCT_NAME sets the user-facing app name.
+juce_add_gui_app(rawdger-juce
     PRODUCT_NAME "Rawdger JUCE"
 )
 
@@ -15,12 +16,13 @@ target_sources(rawdger-juce PRIVATE
 # Link libraries to this target. PRIVATE means these dependencies are only used
 # internally — they won't leak to other targets.
 #   - rawdger-core: our shared library (also brings in its PUBLIC include dirs)
-#   - juce::juce_core: JUCE's core module (strings, files, logging, etc.)
+#   - juce::juce_gui_basics: JUCE's GUI module (components, buttons, windows, etc.).
+#     This transitively includes juce_core and juce_graphics.
 #   - juce::juce_recommended_config_flags: JUCE-recommended compiler flags
 #     (warnings, optimizations, etc.)
 target_link_libraries(rawdger-juce PRIVATE
     rawdger-core
-    juce::juce_core
+    juce::juce_gui_basics
     juce::juce_recommended_config_flags
 )
 

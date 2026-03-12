@@ -5,8 +5,10 @@ cmake_minimum_required(VERSION 3.24...4.2)
 
 # Declare the project name, version, and the languages used.
 # VERSION sets variables like PROJECT_VERSION, PROJECT_VERSION_MAJOR, etc.
-# LANGUAGES CXX means this project only uses C++ (no C, Fortran, etc.).
-project(rawdger VERSION 0.1.0 LANGUAGES CXX)
+# LANGUAGES C CXX enables both the C and C++ compilers. JUCE internally needs
+# a C compiler (for some dependencies), and if we only declare CXX, CMake's
+# C compiler setup can fail when JUCE triggers it mid-configure via FetchContent.
+project(rawdger VERSION 0.1.0 LANGUAGES C CXX)
 
 # Set the C++ standard for all targets in this project.
 # CMAKE_CXX_STANDARD_REQUIRED ON means CMake will error out if the compiler
@@ -54,6 +56,8 @@ if(RAWDGER_BUILD_QT)
     # error if Qt isn't found. COMPONENTS Core specifies which Qt module we need.
     # This is done at the top level (not inside qt-app/) so that CMAKE_PREFIX_PATH
     # (passed via -D on the command line) is properly consumed by CMake.
-    find_package(Qt6 REQUIRED COMPONENTS Core)
+    # Unlike for juce, Qt needs to be installed on the system with, e.g., brew install qt.
+    # Widgets includes Core and Gui transitively, so we only need to list Widgets.
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
     add_subdirectory(qt-app)
 endif()

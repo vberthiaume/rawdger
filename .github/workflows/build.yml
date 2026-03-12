@@ -1,5 +1,6 @@
 name: Build
 
+# Trigger: run this workflow on pushes to main and on pull requests targeting main.
 on:
   push:
     branches: [main]
@@ -8,30 +9,29 @@ on:
 
 jobs:
   build:
+    # strategy.matrix runs the job once per entry in the "include" list (3 times).
     strategy:
+      # fail-fast: false means if one platform fails, the others keep running.
       fail-fast: false
       matrix:
         include:
-          # macOS — JUCE + Qt
           - os: macos-latest
             name: macOS
-            cmake-args: ""
             install: ""
 
-          # Windows — JUCE + Qt
           - os: windows-latest
             name: Windows
-            cmake-args: ""
             install: ""
 
-          # Ubuntu — JUCE + Qt
           - os: ubuntu-latest
             name: Linux
-            cmake-args: ""
+            # >- is YAML's "folded block scalar with strip" — it joins these lines
+            # with spaces into a single string, allowing a readable multi-line command.
             install: >-
               sudo apt-get update &&
               sudo apt-get install -y
               qt6-base-dev
+              libgl1-mesa-dev
               libasound2-dev
               libcurl4-openssl-dev
               libfreetype-dev
@@ -43,23 +43,32 @@ jobs:
               libxrandr-dev
               mesa-common-dev
 
+    # Display name for this job in the GitHub Actions UI.
     name: ${{ matrix.name }}
+    # Which GitHub-hosted runner to use (set per matrix entry above).
     runs-on: ${{ matrix.os }}
 
     steps:
+      # Check out the repository source code into the runner's workspace.
       - uses: actions/checkout@v5
 
-      # Cache JUCE source + juceaide (stable across builds, only changes with JUCE version)
+      # Cache the JUCE source code (juce-src) and its build artifacts (juce-build),
+      # which includes the juceaide helper tool that is slow to compile. The key is
+      # fixed to the JUCE version + platform, so this cache only invalidates when we
+      # bump the JUCE version. The _deps/ folder contains all content downloaded from
+      # fetchcontent, so we can't just cache that whole folder under the juce version as key.
       - name: Cache JUCE
         uses: actions/cache@v5
         with:
           path: |
             build/_deps/juce-src
             build/_deps/juce-build
-            build/_deps/juce-subbuild
           key: juce-8.0.4-${{ matrix.name }}
 
-      # Cache CMake build directory (object files, intermediates)
+      # Cache our project's compiled object files (.o / .obj).
+      # The key includes a hash of all source files — on a cache miss (code changed),
+      # the restore-keys fallback loads the most recent build for this platform,
+      # giving us an incremental build (only recompile changed files).
       - name: Cache build
         uses: actions/cache@v5
         with:
@@ -71,7 +80,11 @@ jobs:
           restore-keys: |
             build-${{ matrix.name }}-
 
-      # Qt — install via aqtinstall on Windows and macOS (with built-in cache)
+      # Install Qt on macOS and Windows using aqtinstall (a lightweight Qt installer).
+      # This action auto-detects the host platform/arch and sets QT_ROOT_DIR and
+      # CMAKE_PREFIX_PATH so CMake's find_package(Qt6) finds it automatically.
+      # cache: true saves the downloaded Qt binaries between runs (~500MB).
+      # Skipped on Linux where we install Qt via apt instead.
       - name: Install Qt
         if: runner.os != 'Linux'
         uses: jurplel/install-qt-action@v4
@@ -79,30 +92,49 @@ jobs:
           version: "6.8.*"
           cache: true
 
+      # Run the platform-specific install command from the matrix (Linux only).
+      # On macOS/Windows this is empty and the step is skipped.
       - name: Install dependencies
         if: matrix.install != ''
         shell: bash
         run: ${{ matrix.install }}
 
+      # Run CMake configure: generates build files (Makefiles, Ninja, VS projects, etc.)
+      # from our CMakeLists.txt. -B build puts all generated files in the build/ dir.
+      # CMAKE_BUILD_TYPE=Release enables optimizations (only affects single-config
+      # generators like Make/Ninja; Visual Studio ignores it and uses --config instead).
       - name: Configure
         shell: bash
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake-args }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
+      # Run the actual compilation. --config Release is needed for multi-config
+      # generators (Visual Studio on Windows) to select the Release configuration.
+      # On Make/Ninja it's harmless (they use CMAKE_BUILD_TYPE from configure).
       - name: Build
         run: cmake --build build --config Release
 
+      # Copy just the final executables into a clean staging/ directory.
+      # This prevents CMake build artifacts (object files, Makefiles, etc.) from
+      # ending up in the downloadable artifact.
+      # find + xargs is used because the binary output path varies by platform
+      # and generator (e.g., Release/ subfolder on Windows, rawdger-juce_artefacts/ for JUCE).
       - name: Stage artifacts
         shell: bash
         run: |
           mkdir -p staging/juce staging/qt
 
-          # JUCE binary
           find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} cp {} staging/juce/
 
-          # Qt binary
           QT_BIN=$(find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1)
           cp "$QT_BIN" staging/qt/
 
+      # Bundle Qt's shared libraries alongside the Qt executable so the artifact
+      # is self-contained and runs without Qt installed on the target machine.
+      # - Windows: windeployqt is a Qt-provided tool that copies all needed DLLs.
+      # - macOS: we manually copy the framework dylibs (not headers/debug info) and
+      #   use install_name_tool to add an rpath so the binary looks for frameworks
+      #   relative to itself (@executable_path/lib/) instead of the CI runner's path.
+      # - Linux: skipped — Linux Qt apps typically rely on system-installed Qt packages.
       - name: Bundle Qt dependencies
         if: runner.os != 'Linux'
         shell: bash
@@ -110,21 +142,35 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             windeployqt --release --no-translations staging/qt/rawdger-qt.exe
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            # Copy only the dylib, not headers/debug info
-            mkdir -p staging/qt/lib/QtCore.framework/Versions/A
-            cp "$QT_ROOT_DIR/lib/QtCore.framework/Versions/A/QtCore" staging/qt/lib/QtCore.framework/Versions/A/
-            ln -s Versions/A/QtCore staging/qt/lib/QtCore.framework/QtCore
+            for fw in QtCore QtGui QtWidgets QtDBus; do
+              if [ -d "$QT_ROOT_DIR/lib/${fw}.framework" ]; then
+                mkdir -p "staging/qt/lib/${fw}.framework/Versions/A"
+                cp "$QT_ROOT_DIR/lib/${fw}.framework/Versions/A/${fw}" "staging/qt/lib/${fw}.framework/Versions/A/"
+                ln -s "Versions/A/${fw}" "staging/qt/lib/${fw}.framework/${fw}"
+              fi
+            done
             install_name_tool -add_rpath @executable_path/lib staging/qt/rawdger-qt
           fi
 
+      # Ad-hoc codesign the macOS binaries. Without this, macOS's sandbox blocks
+      # loading unsigned dylibs (you'd get "file system sandbox blocked open()").
+      # --force --sign - applies an ad-hoc signature (no Apple Developer certificate).
+      # Framework dylibs must be signed before the executable that loads them.
+      # Note: this does NOT prevent the Gatekeeper "unidentified developer" dialog
+      # on downloaded files — that requires a paid Apple Developer certificate + notarization.
       - name: Codesign (macOS)
         if: runner.os == 'macOS'
         run: |
           codesign --force --sign - staging/juce/rawdger-juce
-          # Sign framework dylib first, then the executable
-          codesign --force --sign - staging/qt/lib/QtCore.framework/Versions/A/QtCore
+          find staging/qt/lib -name "*.framework" -type d | while read fw; do
+            name=$(basename "$fw" .framework)
+            codesign --force --sign - "$fw/Versions/A/$name"
+          done
           codesign --force --sign - staging/qt/rawdger-qt
 
+      # Upload the JUCE binary as a downloadable artifact on the GitHub Actions run page.
+      # if-no-files-found: warn means the step won't fail if the binary is missing
+      # (e.g., if the build failed earlier) — it just logs a warning.
       - name: Upload JUCE artifact
         uses: actions/upload-artifact@v7
         with:
@@ -132,6 +178,7 @@ jobs:
           path: staging/juce/
           if-no-files-found: warn
 
+      # Upload the Qt binary (plus bundled DLLs/frameworks) as a downloadable artifact.
       - name: Upload Qt artifact
         uses: actions/upload-artifact@v7
         with:
