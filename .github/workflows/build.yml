@@ -17,31 +17,12 @@ jobs:
         include:
           - os: macos-latest
             name: macOS
-            install: ""
 
           - os: windows-latest
             name: Windows
-            install: ""
 
           - os: ubuntu-latest
             name: Linux
-            # >- is YAML's "folded block scalar with strip" — it joins these lines
-            # with spaces into a single string, allowing a readable multi-line command.
-            install: >-
-              sudo apt-get update &&
-              sudo apt-get install -y
-              qt6-base-dev
-              libgl1-mesa-dev
-              libasound2-dev
-              libcurl4-openssl-dev
-              libfreetype-dev
-              libwebkit2gtk-4.1-dev
-              libx11-dev
-              libxcomposite-dev
-              libxcursor-dev
-              libxinerama-dev
-              libxrandr-dev
-              mesa-common-dev
 
     # Display name for this job in the GitHub Actions UI.
     name: ${{ matrix.name }}
@@ -66,9 +47,6 @@ jobs:
           key: juce-8.0.4-${{ matrix.name }}
 
       # Cache our project's compiled object files (.o / .obj).
-      # The key includes a hash of all source files — on a cache miss (code changed),
-      # the restore-keys fallback loads the most recent build for this platform,
-      # giving us an incremental build (only recompile changed files).
       - name: Cache build
         uses: actions/cache@v5
         with:
@@ -76,28 +54,38 @@ jobs:
             build/core
             build/juce-app
             build/qt-app
+          # This cache key includes a hash of all source files, so we'll have a cache miss if any of it is different
           key: build-${{ matrix.name }}-${{ hashFiles('CMakeLists.txt', 'core/**', 'juce-app/**', 'qt-app/**') }}
+          # However the prefix of the key, ie, build-${{ matrix.name }}-, is used as a restore-keys, which means that
+          # if we have a cache miss, this will restore the last cache that has this prefix. This puts the previous
+          # run's .o files on disk, and then CMake only recompiles the ones whose source files changed.
           restore-keys: |
             build-${{ matrix.name }}-
 
-      # Install Qt on macOS and Windows using aqtinstall (a lightweight Qt installer).
-      # This action auto-detects the host platform/arch and sets QT_ROOT_DIR and
-      # CMAKE_PREFIX_PATH so CMake's find_package(Qt6) finds it automatically.
-      # cache: true saves the downloaded Qt binaries between runs (~500MB).
-      # Skipped on Linux where we install Qt via apt instead.
+      # Install and setup Qt using a third-party action that downloads prebuilt Qt binaries.
       - name: Install Qt
-        if: runner.os != 'Linux'
         uses: jurplel/install-qt-action@v4
         with:
           version: "6.8.*"
           cache: true
 
-      # Run the platform-specific install command from the matrix (Linux only).
-      # On macOS/Windows this is empty and the step is skipped.
-      - name: Install dependencies
-        if: matrix.install != ''
-        shell: bash
-        run: ${{ matrix.install }}
+      # Install system-level dev libraries that JUCE needs on Linux
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: >-   # The >- YAML operator joins these lines with spaces into a single string, allowing a readable multi-line command
+          sudo apt-get update &&
+          sudo apt-get install -y
+          libgl1-mesa-dev
+          libasound2-dev
+          libcurl4-openssl-dev
+          libfreetype-dev
+          libwebkit2gtk-4.1-dev
+          libx11-dev
+          libxcomposite-dev
+          libxcursor-dev
+          libxinerama-dev
+          libxrandr-dev
+          mesa-common-dev
 
       # Run CMake configure: generates build files (Makefiles, Ninja, VS projects, etc.)
       # from our CMakeLists.txt. -B build puts all generated files in the build/ dir.
