@@ -101,38 +101,30 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
-      # Copy just the final executables into a clean staging/ directory.
+      # Copy the final app bundles/executables into a clean staging/ directory.
       # This prevents CMake build artifacts (object files, Makefiles, etc.) from
       # ending up in the downloadable artifact.
-      # find + xargs is used because the binary output path varies by platform
-      # and generator (e.g., Release/ subfolder on Windows, rawdger-juce_artefacts/ for JUCE).
+      # On macOS both apps are .app bundles. On Windows/Linux they are plain executables.
+      # Note: JUCE names the binary after PRODUCT_NAME ("Rawdger JUCE"), not the
+      # CMake target name ("rawdger-juce").
       - name: Stage artifacts
         shell: bash
         run: |
           mkdir -p staging/juce staging/qt
 
-          # JUCE GUI app: on macOS it's a .app bundle (directory), elsewhere a plain
-          # executable. Note: JUCE names the binary after PRODUCT_NAME ("Rawdger JUCE"),
-          # not the CMake target name ("rawdger-juce").
-          JUCE_APP=$(find build/juce-app -name "*.app" -type d | head -1)
-          if [[ -n "$JUCE_APP" ]]; then
-            cp -R "$JUCE_APP" staging/juce/
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            cp -R "$(find build/juce-app -name '*.app' -type d | head -1)" staging/juce/
+            cp -R "$(find build/qt-app -name '*.app' -type d | head -1)" staging/qt/
           else
-            JUCE_BIN=$(find build/juce-app -type f \( -name "Rawdger JUCE" -o -name "Rawdger JUCE.exe" \) | head -1)
-            cp "$JUCE_BIN" staging/juce/
+            find build/juce-app -type f \( -name "Rawdger JUCE" -o -name "Rawdger JUCE.exe" \) | head -1 | xargs -I{} cp {} staging/juce/
+            find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1 | xargs -I{} cp {} staging/qt/
           fi
-
-          # Qt app: plain executable on all platforms
-          QT_BIN=$(find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1)
-          cp "$QT_BIN" staging/qt/
 
       # Bundle Qt's shared libraries alongside the Qt executable so the artifact
       # is self-contained and runs without Qt installed on the target machine.
-      # - Windows: windeployqt is a Qt-provided tool that copies all needed DLLs.
-      # - macOS: we manually copy the framework dylibs (not headers/debug info) and
-      #   use install_name_tool to add an rpath so the binary looks for frameworks
-      #   relative to itself (@executable_path/lib/) instead of the CI runner's path.
-      # - Linux: skipped — Linux Qt apps typically rely on system-installed Qt packages.
+      # - macOS: macdeployqt copies all needed Qt frameworks and plugins into the .app bundle
+      # - Windows: windeployqt copies all needed DLLs next to the .exe
+      # - Linux: skipped — Linux Qt apps typically rely on system-installed Qt packages
       - name: Bundle Qt dependencies
         if: runner.os != 'Linux'
         shell: bash
@@ -140,51 +132,22 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             windeployqt --release --no-translations staging/qt/rawdger-qt.exe
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            # Copy Qt framework dylibs (not headers/debug info)
-            for fw in QtCore QtGui QtWidgets QtDBus; do
-              if [ -d "$QT_ROOT_DIR/lib/${fw}.framework" ]; then
-                mkdir -p "staging/qt/lib/${fw}.framework/Versions/A"
-                cp "$QT_ROOT_DIR/lib/${fw}.framework/Versions/A/${fw}" "staging/qt/lib/${fw}.framework/Versions/A/"
-                ln -s "Versions/A/${fw}" "staging/qt/lib/${fw}.framework/${fw}"
-              fi
-            done
-
-            # Copy Qt plugins needed for a GUI app on macOS:
-            #   platforms/libqcocoa.dylib — creates native macOS windows
-            #   styles/libqmacstyle.dylib — native macOS look and feel (buttons, etc.)
-            mkdir -p staging/qt/plugins/platforms staging/qt/plugins/styles
-            cp "$QT_ROOT_DIR/plugins/platforms/libqcocoa.dylib" staging/qt/plugins/platforms/
-            cp "$QT_ROOT_DIR/plugins/styles/libqmacstyle.dylib" staging/qt/plugins/styles/
-
-            # Create qt.conf so Qt knows where to find plugins relative to the binary
-            echo -e "[Paths]\nPlugins = plugins" > staging/qt/qt.conf
-
-            # Add rpath so the binary finds frameworks relative to itself
-            install_name_tool -add_rpath @executable_path/lib staging/qt/rawdger-qt
+            macdeployqt staging/qt/*.app
           fi
 
-      # Ad-hoc codesign the macOS binaries. Without this, macOS's sandbox blocks
+      # Ad-hoc codesign the macOS .app bundles. Without this, macOS's sandbox blocks
       # loading unsigned dylibs (you'd get "file system sandbox blocked open()").
       # --force --sign - applies an ad-hoc signature (no Apple Developer certificate).
-      # --deep signs the .app bundle and everything inside it.
-      # Framework dylibs must be signed before the executable that loads them.
+      # --deep signs the bundle and everything inside it (frameworks, plugins, etc.).
       # Note: this does NOT prevent the Gatekeeper "unidentified developer" dialog
       # on downloaded files — that requires a paid Apple Developer certificate + notarization.
       - name: Codesign (macOS)
         if: runner.os == 'macOS'
         run: |
-          # Sign the JUCE .app bundle (--deep signs the bundle and its contents)
           codesign --force --deep --sign - staging/juce/*.app
+          codesign --force --deep --sign - staging/qt/*.app
 
-          # Sign Qt framework dylibs and plugins first, then the executable
-          find staging/qt/lib -name "*.framework" -type d | while read fw; do
-            name=$(basename "$fw" .framework)
-            codesign --force --sign - "$fw/Versions/A/$name"
-          done
-          find staging/qt/plugins -name "*.dylib" -exec codesign --force --sign - {} \;
-          codesign --force --sign - staging/qt/rawdger-qt
-
-      # Upload the JUCE binary as a downloadable artifact on the GitHub Actions run page.
+      # Upload the JUCE app as a downloadable artifact on the GitHub Actions run page.
       # if-no-files-found: warn means the step won't fail if the binary is missing
       # (e.g., if the build failed earlier) — it just logs a warning.
       - name: Upload JUCE artifact
@@ -194,7 +157,7 @@ jobs:
           path: staging/juce/
           if-no-files-found: warn
 
-      # Upload the Qt binary (plus bundled DLLs/frameworks) as a downloadable artifact.
+      # Upload the Qt app (plus bundled DLLs/frameworks) as a downloadable artifact.
       - name: Upload Qt artifact
         uses: actions/upload-artifact@v7
         with:

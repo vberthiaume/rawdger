@@ -5,6 +5,14 @@ add_executable(rawdger-qt
     src/main.cpp
 )
 
+# Mark as a GUI app on macOS and Windows:
+#   MACOSX_BUNDLE — produces a .app bundle instead of a bare executable
+#   WIN32_EXECUTABLE — links with WinMain so no console window pops up
+set_target_properties(rawdger-qt PROPERTIES
+    MACOSX_BUNDLE TRUE
+    WIN32_EXECUTABLE TRUE
+)
+
 # Link libraries to this target.
 #   - rawdger-core: our shared library (also brings in its PUBLIC include dirs)
 #   - Qt6::Widgets: Qt's widgets module (buttons, windows, layouts, etc.).
