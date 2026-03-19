@@ -149,9 +149,12 @@ jobs:
               fi
             done
 
-            # Copy the cocoa platform plugin — Qt GUI apps need this to create windows on macOS
-            mkdir -p staging/qt/plugins/platforms
+            # Copy Qt plugins needed for a GUI app on macOS:
+            #   platforms/libqcocoa.dylib — creates native macOS windows
+            #   styles/libqmacstyle.dylib — native macOS look and feel (buttons, etc.)
+            mkdir -p staging/qt/plugins/platforms staging/qt/plugins/styles
             cp "$QT_ROOT_DIR/plugins/platforms/libqcocoa.dylib" staging/qt/plugins/platforms/
+            cp "$QT_ROOT_DIR/plugins/styles/libqmacstyle.dylib" staging/qt/plugins/styles/
 
             # Create qt.conf so Qt knows where to find plugins relative to the binary
             echo -e "[Paths]\nPlugins = plugins" > staging/qt/qt.conf
