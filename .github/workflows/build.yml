@@ -111,8 +111,15 @@ jobs:
         run: |
           mkdir -p staging/juce staging/qt
 
-          find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} cp {} staging/juce/
+          # JUCE GUI app: on macOS it's a .app bundle (directory), elsewhere a plain executable
+          JUCE_APP=$(find build/juce-app -name "*.app" -type d | head -1)
+          if [[ -n "$JUCE_APP" ]]; then
+            cp -R "$JUCE_APP" staging/juce/
+          else
+            find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} cp {} staging/juce/
+          fi
 
+          # Qt app: plain executable on all platforms
           QT_BIN=$(find build/qt-app -type f \( -name "rawdger-qt" -o -name "rawdger-qt.exe" \) | head -1)
           cp "$QT_BIN" staging/qt/
 
@@ -143,13 +150,17 @@ jobs:
       # Ad-hoc codesign the macOS binaries. Without this, macOS's sandbox blocks
       # loading unsigned dylibs (you'd get "file system sandbox blocked open()").
       # --force --sign - applies an ad-hoc signature (no Apple Developer certificate).
+      # --deep signs the .app bundle and everything inside it.
       # Framework dylibs must be signed before the executable that loads them.
       # Note: this does NOT prevent the Gatekeeper "unidentified developer" dialog
       # on downloaded files — that requires a paid Apple Developer certificate + notarization.
       - name: Codesign (macOS)
         if: runner.os == 'macOS'
         run: |
-          codesign --force --sign - staging/juce/rawdger-juce
+          # Sign the JUCE .app bundle (--deep signs the bundle and its contents)
+          codesign --force --deep --sign - staging/juce/*.app
+
+          # Sign Qt framework dylibs first, then the executable
           find staging/qt/lib -name "*.framework" -type d | while read fw; do
             name=$(basename "$fw" .framework)
             codesign --force --sign - "$fw/Versions/A/$name"
