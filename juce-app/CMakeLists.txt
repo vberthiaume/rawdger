@@ -30,8 +30,8 @@ target_link_libraries(rawdger-juce PRIVATE
 # automatically. We use pkg-config to find it and link it ourselves.
 # find_package(PkgConfig) loads CMake's pkg-config integration.
 # pkg_check_modules finds the library and creates the PkgConfig::CURL target.
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
-    target_link_libraries(rawdger-juce PRIVATE PkgConfig::CURL)
-endif()
+# if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+#     find_package(PkgConfig REQUIRED)
+#     pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
+#     target_link_libraries(rawdger-juce PRIVATE PkgConfig::CURL)
+# endif()
