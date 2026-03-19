@@ -111,12 +111,15 @@ jobs:
         run: |
           mkdir -p staging/juce staging/qt
 
-          # JUCE GUI app: on macOS it's a .app bundle (directory), elsewhere a plain executable
+          # JUCE GUI app: on macOS it's a .app bundle (directory), elsewhere a plain
+          # executable. Note: JUCE names the binary after PRODUCT_NAME ("Rawdger JUCE"),
+          # not the CMake target name ("rawdger-juce").
           JUCE_APP=$(find build/juce-app -name "*.app" -type d | head -1)
           if [[ -n "$JUCE_APP" ]]; then
             cp -R "$JUCE_APP" staging/juce/
           else
-            find build/juce-app -type f \( -name "rawdger-juce" -o -name "rawdger-juce.exe" \) | head -1 | xargs -I{} cp {} staging/juce/
+            JUCE_BIN=$(find build/juce-app -type f \( -name "Rawdger JUCE" -o -name "Rawdger JUCE.exe" \) | head -1)
+            cp "$JUCE_BIN" staging/juce/
           fi
 
           # Qt app: plain executable on all platforms
@@ -137,6 +140,7 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             windeployqt --release --no-translations staging/qt/rawdger-qt.exe
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            # Copy Qt framework dylibs (not headers/debug info)
             for fw in QtCore QtGui QtWidgets QtDBus; do
               if [ -d "$QT_ROOT_DIR/lib/${fw}.framework" ]; then
                 mkdir -p "staging/qt/lib/${fw}.framework/Versions/A"
@@ -144,6 +148,15 @@ jobs:
                 ln -s "Versions/A/${fw}" "staging/qt/lib/${fw}.framework/${fw}"
               fi
             done
+
+            # Copy the cocoa platform plugin — Qt GUI apps need this to create windows on macOS
+            mkdir -p staging/qt/plugins/platforms
+            cp "$QT_ROOT_DIR/plugins/platforms/libqcocoa.dylib" staging/qt/plugins/platforms/
+
+            # Create qt.conf so Qt knows where to find plugins relative to the binary
+            echo -e "[Paths]\nPlugins = plugins" > staging/qt/qt.conf
+
+            # Add rpath so the binary finds frameworks relative to itself
             install_name_tool -add_rpath @executable_path/lib staging/qt/rawdger-qt
           fi
 
@@ -160,11 +173,12 @@ jobs:
           # Sign the JUCE .app bundle (--deep signs the bundle and its contents)
           codesign --force --deep --sign - staging/juce/*.app
 
-          # Sign Qt framework dylibs first, then the executable
+          # Sign Qt framework dylibs and plugins first, then the executable
           find staging/qt/lib -name "*.framework" -type d | while read fw; do
             name=$(basename "$fw" .framework)
             codesign --force --sign - "$fw/Versions/A/$name"
           done
+          find staging/qt/plugins -name "*.dylib" -exec codesign --force --sign - {} \;
           codesign --force --sign - staging/qt/rawdger-qt
 
       # Upload the JUCE binary as a downloadable artifact on the GitHub Actions run page.
