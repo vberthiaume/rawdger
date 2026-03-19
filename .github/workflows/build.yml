@@ -132,19 +132,14 @@ jobs:
             macdeployqt staging/qt/*.app
           fi
 
-      # Ad-hoc codesign the macOS .app bundles. Without this, macOS's sandbox blocks
-      # loading unsigned dylibs (you'd get "file system sandbox blocked open()").
-      # --force --sign - applies an ad-hoc signature (no Apple Developer certificate).
-      # --deep signs the bundle and everything inside it (frameworks, plugins, etc.).
-      # Note: this does NOT prevent the Gatekeeper "unidentified developer" dialog
-      # on downloaded files — that requires a paid Apple Developer certificate + notarization.
-      # - name: Codesign (macOS)
-      #   if: runner.os == 'macOS'
-      #   run: |
-      #     codesign --force --deep --sign - staging/juce/*.app
-      #     codesign --force --deep --sign - staging/qt/*.app
+      # Ad-hoc codesign the macOS juce .app bundle, so I don't need to xattr -d hack it.
+      # Sadly this doesn't work with qt, so I need to do something like `xattr -d com.apple.quarantine ./rawdger-qt.app/`
+      - name: Codesign (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          codesign --force --deep --sign - staging/juce/*.app
 
-      # Upload the JUCE app as a downloadable artifact on the GitHub Actions run page.
+      # Upload the artifacts on the GitHub Actions run page.
       # if-no-files-found: warn means the step won't fail if the binary is missing
       # (e.g., if the build failed earlier) — it just logs a warning.
       - name: Upload JUCE artifact
@@ -154,7 +149,6 @@ jobs:
           path: staging/juce/
           if-no-files-found: warn
 
-      # Upload the Qt app (plus bundled DLLs/frameworks) as a downloadable artifact.
       - name: Upload Qt artifact
         uses: actions/upload-artifact@v7
         with:

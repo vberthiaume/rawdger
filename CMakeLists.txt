@@ -5,21 +5,17 @@ cmake_minimum_required(VERSION 3.24...4.2)
 
 # Declare the project name, version, and the languages used.
 # VERSION sets variables like PROJECT_VERSION, PROJECT_VERSION_MAJOR, etc.
-# LANGUAGES C CXX enables both the C and C++ compilers. JUCE internally needs
-# a C compiler (for some dependencies), and if we only declare CXX, CMake's
-# C compiler setup can fail when JUCE triggers it mid-configure via FetchContent.
 project(rawdger VERSION 0.1.0 LANGUAGES C CXX)
 
 # Set the C++ standard for all targets in this project.
-# CMAKE_CXX_STANDARD_REQUIRED ON means CMake will error out if the compiler
-# doesn't support C++17, rather than silently falling back to an older standard.
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Options ---
 # option() defines a boolean cache variable that can be toggled from the command
 # line with -D, e.g.: cmake -B build -DRAWDGER_BUILD_QT=OFF
-# These must be declared before they're used in if() blocks below.
+# These must be declared before they're used in if() blocks below, and it's a good
+# idea to prefix cmake variables with the project name so they don't clash with other variables.
 option(RAWDGER_BUILD_JUCE "Build the JUCE app" ON)
 option(RAWDGER_BUILD_QT   "Build the Qt app"   ON)
 
