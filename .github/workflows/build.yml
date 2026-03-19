@@ -138,11 +138,11 @@ jobs:
       # --deep signs the bundle and everything inside it (frameworks, plugins, etc.).
       # Note: this does NOT prevent the Gatekeeper "unidentified developer" dialog
       # on downloaded files — that requires a paid Apple Developer certificate + notarization.
-      - name: Codesign (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          codesign --force --deep --sign - staging/juce/*.app
-          codesign --force --deep --sign - staging/qt/*.app
+      # - name: Codesign (macOS)
+      #   if: runner.os == 'macOS'
+      #   run: |
+      #     codesign --force --deep --sign - staging/juce/*.app
+      #     codesign --force --deep --sign - staging/qt/*.app
 
       # Upload the JUCE app as a downloadable artifact on the GitHub Actions run page.
       # if-no-files-found: warn means the step won't fail if the binary is missing
