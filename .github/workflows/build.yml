@@ -11,8 +11,7 @@ jobs:
   build:
     # strategy.matrix runs the job once per entry in the "include" list (3 times).
     strategy:
-      # fail-fast: false means if one platform fails, the others keep running.
-      fail-fast: false
+      fail-fast: false          # keep going if one platform fails
       matrix:
         include:
           - os: macos-latest
@@ -33,11 +32,10 @@ jobs:
       # Check out the repository source code into the runner's workspace.
       - uses: actions/checkout@v5
 
-      # Cache the JUCE source code (juce-src) and its build artifacts (juce-build),
-      # which includes the juceaide helper tool that is slow to compile. The key is
-      # fixed to the JUCE version + platform, so this cache only invalidates when we
-      # bump the JUCE version. The _deps/ folder contains all content downloaded from
-      # fetchcontent, so we can't just cache that whole folder under the juce version as key.
+      # Cache the JUCE source code (juce-src) and its build artifacts (juce-build) which includes the juceaide
+      # helper tool. The key is fixed to the JUCE version + platform, so this cache only invalidates when we
+      # bump the JUCE version. The _deps/ folder contains all content downloaded from fetchcontent, so we
+      # can't just cache that whole folder under the juce version as key.
       - name: Cache JUCE
         uses: actions/cache@v5
         with:
@@ -122,9 +120,8 @@ jobs:
 
       # Bundle Qt's shared libraries alongside the Qt executable so the artifact
       # is self-contained and runs without Qt installed on the target machine.
-      # - macOS: macdeployqt copies all needed Qt frameworks and plugins into the .app bundle
-      # - Windows: windeployqt copies all needed DLLs next to the .exe
-      # - Linux: skipped — Linux Qt apps typically rely on system-installed Qt packages
+      # On mac and win we use the Qt deploy tools, e.g., https://doc.qt.io/qt-6/macos-deployment.html, 
+      # and on linux we just relu on system-installed Qt packages
       - name: Bundle Qt dependencies
         if: runner.os != 'Linux'
         shell: bash
