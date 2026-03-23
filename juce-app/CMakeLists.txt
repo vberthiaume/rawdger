@@ -5,6 +5,8 @@
 # PRODUCT_NAME sets the user-facing app name.
 juce_add_gui_app(rawdger-juce
     PRODUCT_NAME "Rawdger JUCE"
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT "Rawdger needs microphone access to record audio."
 )
 
 # Add source files to the target. PRIVATE means these files are only used to
@@ -23,6 +25,9 @@ target_sources(rawdger-juce PRIVATE
 target_link_libraries(rawdger-juce PRIVATE
     rawdger-core
     juce::juce_gui_basics
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
     juce::juce_recommended_config_flags
 )
 

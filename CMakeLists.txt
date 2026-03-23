@@ -29,7 +29,7 @@ if(RAWDGER_BUILD_JUCE)
     # GIT_SHALLOW TRUE avoids cloning the full history (faster).
     FetchContent_Declare(juce
         GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-        GIT_TAG        8.0.4
+        GIT_TAG        8.0.12
         GIT_SHALLOW    TRUE
     )
     # FetchContent_MakeAvailable triggers the download (if not cached) and runs
@@ -54,6 +54,6 @@ if(RAWDGER_BUILD_QT)
     # (passed via -D on the command line) is properly consumed by CMake.
     # Unlike for juce, Qt needs to be installed on the system with, e.g., brew install qt.
     # Widgets includes Core and Gui transitively, so we only need to list Widgets.
-    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Multimedia)
     add_subdirectory(qt-app)
 endif()

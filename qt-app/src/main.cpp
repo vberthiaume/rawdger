@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QDebug>
 #include "rawdger/Core.h"
+#include "AudioRecorder.h"
 
 int main (int argc, char* argv[])
 {
@@ -18,9 +19,30 @@ int main (int argc, char* argv[])
     recordButton->setCheckable (true);
     layout->addWidget (recordButton);
 
-    QObject::connect (recordButton, &QPushButton::toggled, [] (bool checked)
+    AudioRecorder recorder;
+
+    QObject::connect (&recorder, &AudioRecorder::recordingStarted, [] (const QString& path)
     {
-        qDebug() << (checked ? "on" : "off");
+        qDebug() << "Recording started:" << path;
+    });
+
+    QObject::connect (&recorder, &AudioRecorder::recordingStopped, [] (const QString& path)
+    {
+        qDebug() << "Recording stopped:" << path;
+    });
+
+    QObject::connect (&recorder, &AudioRecorder::errorOccurred, [recordButton] (const QString& msg)
+    {
+        qDebug() << "Recording error:" << msg;
+        recordButton->setChecked (false);
+    });
+
+    QObject::connect (recordButton, &QPushButton::toggled, [&recorder] (bool checked)
+    {
+        if (checked)
+            recorder.startRecording();
+        else
+            recorder.stopRecording();
     });
 
     window.show();
