@@ -38,6 +38,22 @@ if(RAWDGER_BUILD_JUCE)
     FetchContent_MakeAvailable(juce)
 endif()
 
+# --- Testing ---
+# Same pattern as RAWDGER_BUILD_JUCE/QT above: toggle with -DRAWDGER_BUILD_TESTS=OFF
+# to skip building the test target (e.g. for faster iteration on the apps).
+option(RAWDGER_BUILD_TESTS "Build unit tests" ON)
+
+if(RAWDGER_BUILD_TESTS)
+    # Catch2 v3 provides Catch2::Catch2WithMain, which supplies a pre-built main()
+    # so test files only need to define TEST_CASEs.
+    FetchContent_Declare(Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.7.1
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(Catch2)
+endif()
+
 # --- Subdirectories ---
 # add_subdirectory tells CMake to process the CMakeLists.txt in each folder.
 # The core library is always built since both apps depend on it.
@@ -45,6 +61,11 @@ add_subdirectory(core)
 
 if(RAWDGER_BUILD_JUCE)
     add_subdirectory(juce-app)
+endif()
+
+# Process the tests/ folder if the test option was set above.
+if(RAWDGER_BUILD_TESTS)
+    add_subdirectory(tests)
 endif()
 
 if(RAWDGER_BUILD_QT)

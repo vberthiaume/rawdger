@@ -4,6 +4,7 @@
 # All source files for this library are listed here.
 add_library(rawdger-core STATIC
     src/Core.cpp
+    src/Recorder.cpp
 )
 
 # Make the include/ directory available to anything that links against rawdger-core.
