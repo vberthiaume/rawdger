@@ -11,11 +11,6 @@ target_link_libraries(rawdger-tests
         Catch2::Catch2WithMain
 )
 
-# enable_testing() registers this directory with CTest so that `ctest` works
-# from the build folder. We use this instead of include(CTest) to avoid
-# pulling in CDash dashboard targets (Continuous*, Experimental*, Nightly*).
-enable_testing()
-
 # include(Catch) loads Catch2's CMake integration module, which provides
 # catch_discover_tests(). This auto-discovers TEST_CASEs in the binary at
 # build time and registers each one as an individual CTest test.

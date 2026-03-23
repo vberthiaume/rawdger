@@ -44,6 +44,10 @@ endif()
 option(RAWDGER_BUILD_TESTS "Build unit tests" ON)
 
 if(RAWDGER_BUILD_TESTS)
+    # enable_testing() must be called at the top level (not in tests/) so that
+    # `ctest --test-dir build` discovers the tests registered by catch_discover_tests().
+    enable_testing()
+
     # Catch2 v3 provides Catch2::Catch2WithMain, which supplies a pre-built main()
     # so test files only need to define TEST_CASEs.
     FetchContent_Declare(Catch2
