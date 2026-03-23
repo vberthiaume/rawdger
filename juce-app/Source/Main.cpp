@@ -1,14 +1,5 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "rawdger/Core.h"
-#include <iostream>
-
-struct StdOutLogger : public juce::Logger
-{
-    void logMessage (const juce::String& message) override
-    {
-        std::cout << message << std::endl;
-    }
-};
 
 class MainComponent : public juce::Component
 {
@@ -20,9 +11,9 @@ public:
         recordButton.onClick = [this]
         {
             if (recordButton.getToggleState())
-                juce::Logger::writeToLog ("on");
+                DBG (rawdger::getString() + " ON");
             else
-                juce::Logger::writeToLog ("off");
+                DBG (rawdger::getString() + " OFF");
         };
         addAndMakeVisible (recordButton);
 
@@ -37,6 +28,8 @@ public:
 private:
     juce::TextButton recordButton;
 };
+
+//======================================================================================
 
 class MainWindow : public juce::DocumentWindow
 {
@@ -55,6 +48,8 @@ public:
     }
 };
 
+//======================================================================================
+
 class RawdgerApplication : public juce::JUCEApplication
 {
 public:
@@ -63,8 +58,6 @@ public:
 
     void initialise (const juce::String&) override
     {
-        logger = std::make_unique<StdOutLogger>();
-        juce::Logger::setCurrentLogger (logger.get());
         mainWindow = std::make_unique<MainWindow>();
     }
 
@@ -80,7 +73,6 @@ public:
     }
 
 private:
-    std::unique_ptr<StdOutLogger> logger;
     std::unique_ptr<MainWindow> mainWindow;
 };
 

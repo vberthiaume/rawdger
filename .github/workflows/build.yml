@@ -155,3 +155,68 @@ jobs:
           name: rawdger-qt-${{ matrix.name }}
           path: staging/qt/
           if-no-files-found: warn
+
+  sanitizers:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: AddressSanitizer
+            c_flags:      "-fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -g"
+            linker_flags: "-fsanitize=address -fsanitize=undefined"
+            env_vars: "UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1"
+
+          - name: UndefinedBehaviorSanitizer
+            c_flags:      "-fsanitize=undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer -g"
+            linker_flags: "-fsanitize=undefined"
+
+          - name: ThreadSanitizer
+            c_flags:      "-fsanitize=thread -fno-omit-frame-pointer -g"
+            linker_flags: "-fsanitize=thread"
+
+          - name: RealtimeSanitizer
+            c_flags:      "-fsanitize=realtime"
+            linker_flags: "-fsanitize=realtime"
+            container: ghcr.io/guillaumeriousat/algogris-rtsan:latest
+
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container || '' }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        if: ${{ !matrix.container }}
+        run: >-
+          sudo apt-get update &&
+          sudo apt-get install -y
+          libgl1-mesa-dev
+          libasound2-dev
+          libcurl4-openssl-dev
+          libfreetype-dev
+          libwebkit2gtk-4.1-dev
+          libx11-dev
+          libxcomposite-dev
+          libxcursor-dev
+          libxinerama-dev
+          libxrandr-dev
+          mesa-common-dev
+
+      - name: Configure
+        shell: bash
+        run: >-
+          ${{ matrix.env_vars || ':' }}
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DRAWDGER_BUILD_QT=OFF
+          -DCMAKE_C_FLAGS="${{ matrix.c_flags }}"
+          -DCMAKE_CXX_FLAGS="${{ matrix.c_flags }}"
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.linker_flags }}"
+          -DCMAKE_SHARED_LINKER_FLAGS="${{ matrix.linker_flags }}"
+
+      - name: Build
+        shell: bash
+        run: >-
+          ${{ matrix.env_vars || ':' }}
+          cmake --build build --config Release
