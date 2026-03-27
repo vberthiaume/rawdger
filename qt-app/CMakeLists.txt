@@ -2,7 +2,7 @@
 # CMake function — a regular add_executable works. The find_package(Qt6) call
 # in the top-level CMakeLists.txt makes Qt6::Widgets available here.
 add_executable(rawdger-qt
-    src/main.cpp
+    src/QtMain.cpp
 )
 
 # Mark as a GUI app on macOS and Windows:

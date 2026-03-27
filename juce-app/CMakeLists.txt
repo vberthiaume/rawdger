@@ -10,7 +10,7 @@ juce_add_gui_app(rawdger-juce
 # Add source files to the target. PRIVATE means these files are only used to
 # build this target — they won't be propagated to anything that links rawdger-juce.
 target_sources(rawdger-juce PRIVATE
-    Source/Main.cpp
+    Source/JuceMain.cpp
 )
 
 # Link libraries to this target. PRIVATE means these dependencies are only used
