@@ -1,5 +1,5 @@
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "rawdger/Core.h"
+#include "rawdger/Recorder.h"
 
 class MainComponent : public juce::Component
 {
@@ -11,9 +11,19 @@ public:
         recordButton.onClick = [this]
         {
             if (recordButton.getToggleState())
-                DBG (rawdger::getString() + " ON");
+            {
+                auto path = juce::File::getSpecialLocation (juce::File::userDesktopDirectory)
+                                .getChildFile (rawdger::generateWavFileName ("juce"))
+                                .getFullPathName()
+                                .toStdString();
+                recorder.startRecording (path);
+                DBG ("Recording to: " + juce::String (path));
+            }
             else
-                DBG (rawdger::getString() + " OFF");
+            {
+                recorder.stopRecording();
+                DBG ("Recording stopped.");
+            }
         };
         addAndMakeVisible (recordButton);
 
@@ -27,6 +37,7 @@ public:
 
 private:
     juce::TextButton recordButton;
+    rawdger::Recorder recorder;
 };
 
 //======================================================================================

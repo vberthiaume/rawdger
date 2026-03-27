@@ -1,10 +1,11 @@
 #include <QApplication>
 #include <QPushButton>
+#include <QStandardPaths>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QDebug>
 
-#include "rawdger/Core.h"
+#include "rawdger/Recorder.h"
 
 int main (int argc, char* argv[])
 {
@@ -23,11 +24,23 @@ int main (int argc, char* argv[])
     // similarly, adding a widget to a layout also adds it to its object tree
     layout->addWidget (recordButton);
 
+    rawdger::Recorder recorder;
+
     // connect recordButton's toggled signal to a callback (can be a lambda, a function, or a QObject slot)
-    QObject::connect (recordButton, &QPushButton::toggled, [] (bool checked)
+    QObject::connect (recordButton, &QPushButton::toggled, [&recorder] (bool checked)
     {
-        // qDebug() is Qt's logging function, similar to std::cerr << "yada";
-        qDebug() << rawdger::getString() << (checked ?  "on" : "off");
+        if (checked)
+        {
+            auto desktop = QStandardPaths::writableLocation (QStandardPaths::DesktopLocation);
+            auto path = (desktop + "/" + QString::fromStdString (rawdger::generateWavFileName ("qt"))).toStdString();
+            recorder.startRecording (path);
+            qDebug() << "Recording to:" << path.c_str();
+        }
+        else
+        {
+            recorder.stopRecording();
+            qDebug() << "Recording stopped.";
+        }
     });
 
     window.show();
