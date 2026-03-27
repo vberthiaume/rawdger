@@ -10,12 +10,9 @@ namespace rawdger
 std::string generateWavFileName(const std::string& appName)
 {
     auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::tm local {};
-    localtime_r(&now, &local);
-
     std::ostringstream oss;
     oss << "rawdger_" << appName << "_"
-        << std::put_time(&local, "%Y-%m-%d_%H-%M-%S")
+        << std::put_time(std::localtime(&now), "%Y-%m-%d_%H-%M-%S")
         << ".wav";
     return oss.str();
 }
