@@ -13,7 +13,7 @@
 struct TempWav
 {
     std::string path;
-    TempWav() : path(std::filesystem::temp_directory_path() / "rawdger_test.wav") {}
+    TempWav() : path((std::filesystem::temp_directory_path() / "rawdger_test.wav").string()) {}
     ~TempWav() { std::filesystem::remove(path); }
 };
 
