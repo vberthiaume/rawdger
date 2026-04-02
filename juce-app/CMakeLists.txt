@@ -11,6 +11,8 @@ juce_add_gui_app(rawdger-juce
 # build this target — they won't be propagated to anything that links rawdger-juce.
 target_sources(rawdger-juce PRIVATE
     Source/JuceMain.cpp
+    Source/MainComponent.h
+    Source/MainWindow.h
 )
 
 # Link libraries to this target. PRIVATE means these dependencies are only used
