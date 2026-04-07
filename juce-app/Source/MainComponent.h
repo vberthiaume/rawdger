@@ -5,7 +5,7 @@
 
 class MainComponent : public juce::Component
 {
-public:
+  public:
     MainComponent()
     {
         recordButton.setButtonText ("Record");
@@ -37,7 +37,7 @@ public:
         recordButton.setBounds (getLocalBounds().reduced (50));
     }
 
-private:
-    juce::TextButton recordButton;
+  private:
+    juce::TextButton  recordButton;
     rawdger::Recorder recorder;
 };

@@ -3,8 +3,8 @@
 
 class RawdgerApplication : public juce::JUCEApplication
 {
-public:
-    const juce::String getApplicationName() override    { return "Rawdger JUCE"; }
+  public:
+    const juce::String getApplicationName() override { return "Rawdger JUCE"; }
     const juce::String getApplicationVersion() override { return "0.1.0"; }
 
     void initialise (const juce::String&) override
@@ -23,7 +23,7 @@ public:
         quit();
     }
 
-private:
+  private:
     std::unique_ptr<MainWindow> mainWindow;
 };
 

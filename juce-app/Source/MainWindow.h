@@ -5,9 +5,9 @@
 
 class MainWindow : public juce::DocumentWindow
 {
-public:
+  public:
     MainWindow()
-        : DocumentWindow ("Rawdger JUCE", juce::Colours::darkgrey, allButtons)
+    : DocumentWindow ("Rawdger JUCE", juce::Colours::darkgrey, allButtons)
     {
         setContentOwned (new MainComponent(), true);
         centreWithSize (getWidth(), getHeight());

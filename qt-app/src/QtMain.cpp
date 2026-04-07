@@ -28,7 +28,7 @@ int main (int argc, char* argv[])
 
     // connect recordButton's toggled signal to a callback (can be a lambda, a function, or a QObject slot)
     QObject::connect (recordButton, &QPushButton::toggled, [&recorder] (bool checked)
-    {
+                      {
         if (checked)
         {
             auto desktop = QStandardPaths::writableLocation (QStandardPaths::DesktopLocation);
@@ -40,8 +40,7 @@ int main (int argc, char* argv[])
         {
             recorder.stopRecording();
             qDebug() << "Recording stopped.";
-        }
-    });
+        } });
 
     window.show();
     return app.exec();
