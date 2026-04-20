@@ -5,6 +5,8 @@ namespace rawdger
 
 std::string getString()
 {
+    int* p = NULL;
+
     return "currently march 19th bro";
 }
 

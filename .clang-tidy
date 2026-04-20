@@ -1,0 +1,11 @@
+Checks: >
+  -*,
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  cppcoreguidelines-*,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers
+HeaderFilterRegex: '(core|juce-app|qt-app|tests)/.*'
+FormatStyle: file
