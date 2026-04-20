@@ -270,7 +270,11 @@ jobs:
           tidy-checks: ''            # use project .clang-tidy
           database: build
           files-changed-only: false  # scan the whole tree every run
-          thread-comments: true      # summary comment on the PR
+          # Only post a summary comment on PRs. On push events cpp-linter would
+          # try to post a commit comment, which needs contents:write — not
+          # worth the broader token scope since the Actions step summary already
+          # shows push-run results.
+          thread-comments: ${{ github.event_name == 'pull_request' }}
           tidy-review: true          # inline review comments on offending lines
           step-summary: true         # summary on the Actions run page
           extensions: cpp,h
