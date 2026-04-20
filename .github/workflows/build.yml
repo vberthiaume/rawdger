@@ -282,8 +282,13 @@ jobs:
           # files). We want tidy to look at our source folders only.
           ignore: 'build|.github'
 
+      # continue-on-error: the step still exits 1 when there are findings, but
+      # GitHub treats it as a warning rather than a job failure. Job + workflow
+      # stay green; the step shows a ⚠️ so the count is visible at a glance.
+      # Remove continue-on-error to make tidy findings block merges.
       - name: Fail on tidy issues
         if: steps.linter.outputs.checks-failed > 0
+        continue-on-error: true
         run: |
           echo "clang-tidy reported issues — see PR comments / step summary."
           exit 1
