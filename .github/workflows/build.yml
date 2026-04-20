@@ -206,3 +206,57 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure --verbose -C Release
+
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # needed to post PR review comments
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0     # cpp-linter needs history to diff changed files
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      # Skip the JUCE and Qt apps — clang-tidy only needs compile_commands.json
+      # for the files we want to analyze (core + tests). HeaderFilterRegex in
+      # .clang-tidy already suppresses diagnostics from third-party headers.
+      - name: Configure
+        run: >-
+          cmake -B build
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -DRAWDGER_BUILD_JUCE=OFF
+          -DRAWDGER_BUILD_QT=OFF
+
+      # Fetch Catch2 headers so tidy can resolve #includes in tests/.
+      - name: Prefetch dependencies
+        run: cmake --build build --target Catch2 -j
+
+      # cpp-linter runs clang-tidy and posts findings as PR review comments
+      # (on pull_request) or a step summary (on push). It uses .clang-tidy
+      # from the repo root and compile_commands.json from build/.
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: ''                  # don't run clang-format
+          tidy-checks: ''            # use project .clang-tidy
+          database: build
+          files-changed-only: true   # scope to files changed in the push/PR
+          thread-comments: true      # summary comment on the PR
+          tidy-review: true          # inline review comments on offending lines
+          step-summary: true         # summary on the Actions run page
+          extensions: cpp,h
+
+      - name: Fail on tidy issues
+        if: steps.linter.outputs.checks-failed > 0
+        run: |
+          echo "clang-tidy reported issues — see PR comments / step summary."
+          exit 1
