@@ -249,7 +249,7 @@ jobs:
           style: ''                  # don't run clang-format
           tidy-checks: ''            # use project .clang-tidy
           database: build
-          files-changed-only: true   # scope to files changed in the push/PR
+          files-changed-only: false  # scan the whole tree every run
           thread-comments: true      # summary comment on the PR
           tidy-review: true          # inline review comments on offending lines
           step-summary: true         # summary on the Actions run page
