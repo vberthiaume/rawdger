@@ -14,6 +14,7 @@ std::string getString()
 #if 1
 
 #include <algorithm>
+#include <cstring>
 #include <string>
 #include <vector>
 
